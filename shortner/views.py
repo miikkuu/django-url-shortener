@@ -2,10 +2,49 @@ from django.shortcuts import render, redirect
 import uuid
 from .models import Url
 from django.http import HttpResponse
+from .forms import CreateUserForm 
+from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import get_object_or_404
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
 
 # Create your views here.
 def index(request):
     return render(request, 'index.html')
+
+#Registration page.
+def registerPage(request):
+    form = CreateUserForm()
+    if request.method == 'POST':
+        form = CreateUserForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Account was created')
+            return redirect('login')
+    context = {'form': form}
+    return render(request, 'register.html', context)
+
+
+
+#login page
+def loginPage(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username = username, password = password)
+
+        if user is not None:
+            login(request, user)
+            return redirect('index')
+        else:
+            messages.info(request, 'Incorrect Username or Password')
+
+    context={}
+    return render(request, 'login.html', context)
+
+def logoutUser(request):
+    logout(request)
+    return redirect('login')
 
 def create(request):
     if request.method == 'POST':
@@ -15,6 +54,24 @@ def create(request):
         new_url.save()
         return HttpResponse(uid)
 
-def go(request, pk):
-    url_details = Url.objects.get(uuid=pk)
-    return redirect(url_details.link)
+def go(request, pk=None):
+    # Define a mapping of keywords to URLs
+    keyword_mapping = {
+        'register': 'register/',
+        'login': 'login/',
+        'admin' : 'admin/',
+        'logout' : 'logout/',
+    }
+
+    #allows redirection to intended page when not using uuid
+    if pk is None:
+        return redirect('register')
+
+    if pk in keyword_mapping:
+        return redirect(keyword_mapping[pk])
+
+    try:
+        url_details = get_object_or_404(Url, uuid=pk)
+        return redirect(url_details.link)
+    except ObjectDoesNotExist:
+        return HttpResponse("URL not found.")
