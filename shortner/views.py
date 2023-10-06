@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect
 import uuid
-from .models import Url
+from .models import Url, ShortenedURLHistory
 from django.http import HttpResponse
-from .forms import CreateUserForm 
+from .forms import CreateUserForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
@@ -52,6 +52,11 @@ def create(request):
         uid = str(uuid.uuid4())[:5]
         new_url = Url(link=link,uuid=uid)
         new_url.save()
+        if request.user.is_authenticated:
+            history = ShortenedURLHistory()
+            history.shortened_url = link
+            history.user = request.user
+            history.save()
         return HttpResponse(uid)
 
 def go(request, pk=None):
@@ -75,3 +80,12 @@ def go(request, pk=None):
         return redirect(url_details.link)
     except ObjectDoesNotExist:
         return HttpResponse("URL not found.")
+
+
+def view_history(request):
+    if request.user.is_authenticated:
+        history = ShortenedURLHistory.objects.filter(user=request.user).order_by('-timestamp')
+        context = {'history': history}
+        return render(request, 'view_history.html', context)
+    else:
+        return render(request, 'login.html')
