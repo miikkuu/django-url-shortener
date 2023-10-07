@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+  <h2>History</h2>
+  <ul>
+    {% for item in history %}
+      <li>{{ item.shortened_url }} - {{ item.timestamp }}</li>
+    {% endfor %}
+  </ul>
+
+{% endblock %}
